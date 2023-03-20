@@ -7,5 +7,5 @@ such as building plots for Kulbak criterion relation to the radius of the class 
 Example of tiles classification (Class 1 - yellow - field, Class 2 - red - road,
 Class 0 - lime - forest):
 
-![image](output/result_20-58-23_190358_img_sample_sample_delta_auto.png)
+![image](output/result_20-43-23_200340_img_sample_sample_delta_auto.png)
 
