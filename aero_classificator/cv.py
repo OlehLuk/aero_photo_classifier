@@ -17,8 +17,9 @@ class AeroPhotoClassifier:
         classes_values = AeroPhotoClassifier.get_classes_values(classes_images_names)
 
         # Знаходимо оптимальне значення дельти для СКД
+        plot_delta_data = None
         if delta is None:
-            delta = AeroPhotoClassifier.get_optimal_delta(classes_values)
+            delta, plot_delta_data = AeroPhotoClassifier.get_optimal_delta(classes_values)
             AeroPhotoClassifier.RESULT_NAME_TEMPLATE += "_delta_auto"
         else:
             AeroPhotoClassifier.RESULT_NAME_TEMPLATE += f"_delta_{delta}"
@@ -36,8 +37,10 @@ class AeroPhotoClassifier:
         radii, data_for_plots = AeroPhotoClassifier.get_radii(class_vectors, class_binary_matrices)
         print("Optimal radii:", radii)
 
-        print("Building plot for the relation between Kulbak criterion value and radius")
-        AeroPhotoClassifier.build_plots(data_for_plots, colors, classes_images_names, image_name=image_name)
+        print("Building plot for the relation between Kulbak criterion value and radius; "
+              "Kulbak criterion value and delta value.")
+        AeroPhotoClassifier.build_plots(data_for_plots, colors, classes_images_names, image_name=image_name,
+                                        plot_delta_data=plot_delta_data)
 
         print("Starting exam")
         # Класифікуємо зображення (екзамен)
@@ -168,6 +171,7 @@ class AeroPhotoClassifier:
         # Шукаємо оптимальне значення у інтервалі [1, 120]
         print("Calculation of the optimal delta")
         print("Delta | criterion value | criterion value in working area")
+        plot_values = []
         for delta in range(1, 121):
             # Розраховуємо вектор, який задає СКД, бінарні матриці та еталонні вектори кожного класу
             class_binary_matrices = []
@@ -197,6 +201,7 @@ class AeroPhotoClassifier:
             avg_sum_working_area = np.mean(sum_working_area)
 
             current_value = avg_sum_working_area
+            plot_values.append([delta, avg_sum_, avg_sum_working_area])
             if current_value > optimal_delta_criterion_value:
                 optimal_delta = delta
                 optimal_delta_criterion_value = current_value
@@ -205,7 +210,7 @@ class AeroPhotoClassifier:
 
         print("Optimal delta: ", optimal_delta)
 
-        return optimal_delta
+        return optimal_delta, plot_values
 
     @staticmethod
     def get_criterion_values_for_classes_and_radii(class_vectors: List[List[int]],
@@ -376,21 +381,37 @@ class AeroPhotoClassifier:
         return vector
 
     @staticmethod
-    def build_plots(data_for_plots, colors, classes_images_names, image_name=None):
+    def build_plots(data_for_plots, colors, classes_images_names, image_name=None, plot_delta_data=None):
         fig = plt.figure()
         for i, data in enumerate(data_for_plots):
             x, y = data
             label = classes_images_names[i].split("/")[-1][:-4]
             print(label, y)
             rgb_01 = tuple([x / 255. for x in colors[i]])
-            plt.plot(x, y, color=rgb_01, label=label, figure=fig,
-                     alpha=0.5)
+            plt.plot(x, y, color=rgb_01, label=label, figure=fig)
 
         plt.xlabel("Radius")
-        plt.ylabel("Kulbak criterion size")
+        plt.ylabel("Kulbak criterion")
         plt.legend()
         filename = AeroPhotoClassifier.RESULT_NAME_TEMPLATE.format(
             datetime.datetime.now().strftime(AeroPhotoClassifier.RESULT_DATE_FORMAT),
             image_name[:-4].replace('/', '_') if image_name is not None else ""
         )
-        plt.savefig(f"output/{filename}_kulbak_plot.png")
+        plt.savefig(f"output/{filename}_kulbak_radius_plot.png")
+
+        if plot_delta_data is not None:
+            fig = plt.figure()
+            x = list([x[0] for x in plot_delta_data])
+            y_1 = list([x[1] for x in plot_delta_data])
+            y_2 = list([x[2] for x in plot_delta_data])
+            plt.plot(x, y_1, color='red', label="Average criterion", figure=fig)
+            plt.plot(x, y_2, color='blue', label="Average criterion in work area", figure=fig)
+
+            plt.xlabel("Delta")
+            plt.ylabel("Kulbak criterion")
+            plt.legend()
+            filename = AeroPhotoClassifier.RESULT_NAME_TEMPLATE.format(
+                datetime.datetime.now().strftime(AeroPhotoClassifier.RESULT_DATE_FORMAT),
+                image_name[:-4].replace('/', '_') if image_name is not None else ""
+            )
+            plt.savefig(f"output/{filename}_kulbak_delta_plot.png")
